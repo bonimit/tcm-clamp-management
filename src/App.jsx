@@ -1243,7 +1243,7 @@ export default function App() {
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: T.bg0, color: T.text, overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100vh", background: T.bg0, color: T.text, fontFamily: T.sans, overflow: "hidden" }}>
       <style>{CSS}</style>
       <Sidebar view={view} setView={setView} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
