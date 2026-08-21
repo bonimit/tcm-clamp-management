@@ -21,7 +21,7 @@ const T = {
   text: "#E7EDF4",
   dim: "#93A1B3",
   faint: "#5D6B7E",
-  blue: "#F2F4F8",      // corporate primary — monochrome ink (was blue), bright on this dark canvas
+  blue: "#C9CFD8",      // corporate primary — monochrome ink (was blue), softened so solid fills don't glare on this dark canvas
   blueSoft: "#C7CFDA",
   blueDim: "rgba(255,255,255,0.07)",
   yellow: "#F1C21B",    // draft / on-plan
@@ -43,6 +43,15 @@ const CSS = `
 @keyframes toastIn { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
 @keyframes ping { 0% { transform: scale(1); opacity: .5; } 100% { transform: scale(2.1); opacity: 0; } }
+@keyframes drawLine { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes popIn { from { transform: scale(0.25); } to { transform: scale(1); } }
+@keyframes growUp { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes donutIn { from { opacity: 0; transform: scale(0.75) rotate(-90deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
+@keyframes glowPulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+.draw-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: drawLine 1.3s cubic-bezier(.3,.7,.3,1) forwards; }
+.pop-in { transform-box: fill-box; transform-origin: center; transform: scale(0.25); animation: popIn .45s cubic-bezier(.3,1.4,.5,1) forwards; }
+.bar-grow { transform-box: fill-box; transform-origin: bottom; transform: scaleY(0); animation: growUp .7s cubic-bezier(.2,.8,.3,1) forwards; }
+.donut-in { transform-origin: 80px 80px; animation: donutIn .8s cubic-bezier(.25,.9,.35,1) forwards; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid ${T.blue}; outline-offset: 2px; }
 select option { background: ${T.bg2}; color: ${T.text}; }
@@ -226,11 +235,33 @@ function PlantSelect() {
 function KPI({ value, label, sub, subColor }) {
   return (
     <Panel style={{ flex: 1, minWidth: 150 }}>
-      <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 32, color: T.text, letterSpacing: "-0.02em", lineHeight: 1 }}>{value}</div>
+      <div style={{ fontFamily: T.sans, fontWeight: 600, fontSize: 32, color: T.text, letterSpacing: "-0.02em", lineHeight: 1 }}><CountUp value={value} /></div>
       <div style={{ fontFamily: T.sans, fontSize: 12.5, color: T.dim, marginTop: 8 }}>{label}</div>
       {sub && <div style={{ fontFamily: T.mono, fontSize: 11, color: subColor || T.faint, marginTop: 6 }}>{sub}</div>}
     </Panel>
   );
+}
+
+function CountUp({ value, duration = 900 }) {
+  const target = parseInt(String(value).replace(/[^\d]/g, ""), 10);
+  const [n, setN] = useState(Number.isNaN(target) ? 0 : 0);
+  useEffect(() => {
+    if (Number.isNaN(target)) return;
+    let raf, start;
+    const tick = (t) => {
+      if (start == null) start = t;
+      const p = Math.min(1, (t - start) / duration);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setN(Math.round(target * eased));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  if (Number.isNaN(target)) return value;
+  const prefix = String(value).match(/^\D*/)?.[0] || "";
+  const suffix = String(value).match(/\D*$/)?.[0] || "";
+  return `${prefix}${n}${suffix}`;
 }
 
 function ChartCard({ title, right, children, style }) {
@@ -263,11 +294,13 @@ function PredictionChart() {
       ))}
       {/* AI forecast band on last segment */}
       <rect x={step * 7} y="0" width={step * 2} height={H} fill={T.blue} opacity="0.06" />
-      <text x={step * 8} y="12" fill={T.blueSoft} fontSize="9.5" fontFamily={T.mono} textAnchor="middle" letterSpacing="1">AI FORECAST</text>
-      <path d={path(installed)} fill="none" stroke={T.blueSoft} strokeWidth="1.8" />
-      <path d={path(predicted)} fill="none" stroke={T.teal} strokeWidth="1.8" strokeDasharray="1 0" opacity="0.85" />
-      {installed.map((v, i) => <circle key={"a" + i} cx={i * step} cy={y(v)} r="2.6" fill={T.bg1} stroke={T.blueSoft} strokeWidth="1.4" />)}
-      {predicted.map((v, i) => <circle key={"b" + i} cx={i * step} cy={y(v)} r="2.6" fill={T.bg1} stroke={T.teal} strokeWidth="1.4" />)}
+      <text x={step * 8} y="12" fill={T.blueSoft} fontSize="9.5" fontFamily={T.mono} textAnchor="middle" letterSpacing="1" style={{ animation: "glowPulse 2.4s ease-in-out infinite" }}>AI FORECAST</text>
+      <path d={path(installed)} pathLength="1" className="draw-line" fill="none" stroke={T.blueSoft} strokeWidth="1.8" />
+      <path d={path(predicted)} pathLength="1" className="draw-line" fill="none" stroke={T.teal} strokeWidth="1.8" opacity="0.85" style={{ animationDelay: "0.25s" }} />
+      {installed.map((v, i) => <circle key={"a" + i} className="pop-in" style={{ animationDelay: `${1.1 + i * 0.05}s` }} cx={i * step} cy={y(v)} r="2.6" fill={T.bg1} stroke={T.blueSoft} strokeWidth="1.4" />)}
+      {predicted.map((v, i) => <circle key={"b" + i} className="pop-in" style={{ animationDelay: `${1.3 + i * 0.05}s` }} cx={i * step} cy={y(v)} r="2.6" fill={T.bg1} stroke={T.teal} strokeWidth="1.4" />)}
+      {/* live AI pulse on the latest forecast point */}
+      <circle cx={(predicted.length - 1) * step} cy={y(predicted[predicted.length - 1])} r="3" fill="none" stroke={T.teal} strokeWidth="1.5" style={{ animation: "ping 1.8s ease-out infinite", animationDelay: "1.9s", transformOrigin: `${(predicted.length - 1) * step}px ${y(predicted[predicted.length - 1])}px` }} />
       {labels.map((l, i) => <text key={l} x={i * step} y={H + 20} fill={T.faint} fontSize="9.5" fontFamily={T.mono} textAnchor="middle">{l}</text>)}
     </svg>
   );
@@ -291,7 +324,7 @@ function ScatterChart() {
         </g>
       ))}
       {pts.map((p, i) => (
-        <circle key={i} cx={x(p.d) + (i % 5) * 7 - 14} cy={y(p.v)} r={p.big ? 5 : 2.6}
+        <circle key={i} className="pop-in" style={{ animationDelay: `${i * 0.02}s` }} cx={x(p.d) + (i % 5) * 7 - 14} cy={y(p.v)} r={p.big ? 5 : 2.6}
           fill={p.big ? T.blue : (i % 2 ? T.blueSoft : T.teal)} opacity={p.big ? 1 : 0.75} />
       ))}
       {days.map((l, i) => <text key={l} x={x(i)} y={H + 18} fill={T.faint} fontSize="9.5" fontFamily={T.mono} textAnchor="middle">{l}</text>)}
@@ -315,8 +348,8 @@ function PlantBars() {
       ))}
       {data.map(([a, b], i) => (
         <g key={i}>
-          <rect x={i * gw + gw / 2 - 16} y={y(a)} width="13" height={H - y(a)} rx="2" fill={T.blue} />
-          {b > 0 && <rect x={i * gw + gw / 2 + 1} y={y(b)} width="13" height={H - y(b)} rx="2" fill={T.teal} opacity="0.8" />}
+          <rect className="bar-grow" style={{ animationDelay: `${i * 0.05}s` }} x={i * gw + gw / 2 - 16} y={y(a)} width="13" height={H - y(a)} rx="2" fill={T.blue} />
+          {b > 0 && <rect className="bar-grow" style={{ animationDelay: `${i * 0.05 + 0.08}s` }} x={i * gw + gw / 2 + 1} y={y(b)} width="13" height={H - y(b)} rx="2" fill={T.teal} opacity="0.8" />}
           <text x={i * gw + gw / 2} y={H + 18} fill={T.faint} fontSize="9.5" fontFamily={T.mono} textAnchor="middle">{labels[i]}</text>
         </g>
       ))}
@@ -337,11 +370,13 @@ function ChemDonut() {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
       <svg viewBox="0 0 160 160" style={{ width: 150, flexShrink: 0 }}>
-        {segs.map((s) => {
-          const frac = s.v / total, off = acc; acc += frac;
-          return <circle key={s.label} cx="80" cy="80" r={R} fill="none" stroke={s.c} strokeWidth="22"
-            strokeDasharray={`${frac * C} ${C}`} strokeDashoffset={-off * C} transform="rotate(-90 80 80)" />;
-        })}
+        <g className="donut-in">
+          {segs.map((s) => {
+            const frac = s.v / total, off = acc; acc += frac;
+            return <circle key={s.label} cx="80" cy="80" r={R} fill="none" stroke={s.c} strokeWidth="22"
+              strokeDasharray={`${frac * C} ${C}`} strokeDashoffset={-off * C} transform="rotate(-90 80 80)" />;
+          })}
+        </g>
         <text x="80" y="76" fill={T.text} fontSize="19" fontWeight="600" fontFamily={T.sans} textAnchor="middle">945</text>
         <text x="80" y="93" fill={T.faint} fontSize="9" fontFamily={T.mono} textAnchor="middle" letterSpacing="1">CLAMPS</text>
       </svg>
@@ -355,6 +390,41 @@ function ChemDonut() {
         ))}
       </div>
     </div>
+  );
+}
+
+const ACTIVITY = [
+  { c: T.red,    who: "AI Assist", text: "flagged A-P1-2026/143 as Extreme risk — leak-likelihood model", when: "2m ago" },
+  { c: T.teal,   who: "AI Assist", text: "merged 2 overdue monitoring routes into one mobilization", when: "18m ago" },
+  { c: T.green,  who: "Field crew", text: "installed clamp at GC5 · unit 121 — Split-sleeve 10″", when: "41m ago" },
+  { c: T.orange, who: "Planning",  text: "generated work order for A-P1-2026/141 permanent repair", when: "1h ago" },
+  { c: T.blueSoft, who: "Vendor",  text: "submitted quotation for A-P1-2026/131", when: "2h ago" },
+  { c: T.dim,    who: "System",   text: "synced monitoring record A-P1-2026/128 to QSHE dashboard", when: "3h ago" },
+];
+
+function ActivityFeed() {
+  return (
+    <Panel pad={0}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 20px", borderBottom: `1px solid ${T.line}` }}>
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: T.teal, animation: "blink 2s infinite", flexShrink: 0 }} />
+        <span style={{ fontFamily: T.sans, fontSize: 13, fontWeight: 600, color: T.text }}>Live activity</span>
+        <span style={{ fontFamily: T.mono, fontSize: 10, color: T.faint, marginLeft: "auto", letterSpacing: "0.06em" }}>ALL SYSTEMS · REQUESTS, MONITORING, INVENTORY</span>
+      </div>
+      <div>
+        {ACTIVITY.map((a, i) => (
+          <div key={i} style={{
+            display: "flex", alignItems: "center", gap: 12, padding: "11px 20px",
+            borderBottom: i < ACTIVITY.length - 1 ? `1px solid ${T.line}` : "none",
+            opacity: 0, animation: "fadeUp .5s ease forwards", animationDelay: `${i * 0.09}s`,
+          }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: a.c, flexShrink: 0 }} />
+            <span style={{ fontFamily: T.sans, fontSize: 12.5, color: T.text, fontWeight: 600, flexShrink: 0 }}>{a.who}</span>
+            <span style={{ fontFamily: T.sans, fontSize: 12.5, color: T.dim }}>{a.text}</span>
+            <span style={{ fontFamily: T.mono, fontSize: 11, color: T.faint, marginLeft: "auto", flexShrink: 0 }}>{a.when}</span>
+          </div>
+        ))}
+      </div>
+    </Panel>
   );
 }
 
@@ -400,6 +470,8 @@ function Dashboard({ setView }) {
           <ChemDonut />
         </ChartCard>
       </div>
+
+      <ActivityFeed />
     </div>
   );
 }
@@ -762,6 +834,7 @@ function SiteScene({ layers }) {
 
 function MapView() {
   const [selected, setSelected] = useState("A-P1-2026/128");
+  const [detail, setDetail] = useState(null);
   const [hover, setHover] = useState(null);
   const [layers, setLayers] = useState({ heat: true, requests: true, monitoring: false, labels: true });
   const [cam, setCam] = useState({ k: 1, tx: 0, ty: 0 });
@@ -838,12 +911,11 @@ function MapView() {
   const inv = 1 / cam.k;
 
   return (
-    <div style={{ padding: 28, display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 16, animation: "fadeUp .3s ease" }}>
-      <Panel pad={0} style={{ position: "relative", overflow: "hidden" }}>
-        <svg ref={svgRef} viewBox={`0 0 ${W_MAP} ${H_MAP}`}
+    <div style={{ position: "relative", height: "100%", overflow: "hidden", animation: "fadeUp .3s ease" }}>
+      <svg ref={svgRef} viewBox={`0 0 ${W_MAP} ${H_MAP}`}
           onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp}
           onDoubleClick={(e) => zoomAt(e.clientX, e.clientY, 1.5)}
-          style={{ width: "100%", display: "block", background: "#14170F", borderRadius: 8, cursor: drag.current ? "grabbing" : "grab", touchAction: "none", userSelect: "none" }}>
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block", background: "#14170F", cursor: drag.current ? "grabbing" : "grab", touchAction: "none", userSelect: "none" }}>
           <g transform={`translate(${cam.tx} ${cam.ty}) scale(${cam.k})`} style={{ transition: anim ? "transform .6s cubic-bezier(.3,.7,.3,1)" : "none" }}>
             <SiteScene layers={layers} />
 
@@ -868,6 +940,7 @@ function MapView() {
               return (
                 <g key={r.no} transform={`translate(${r.pin.x} ${r.pin.y}) scale(${inv})`}
                   onClick={() => { if (!drag.current?.moved) { setSelected(r.no); flyTo(r.pin.x, r.pin.y); } }}
+                  onDoubleClick={() => setDetail(r.no)}
                   onMouseEnter={() => setHover({ x: r.pin.x, y: r.pin.y, title: r.no, sub: r.tag, kind: r.status.toUpperCase(), ai: r.ai })}
                   onMouseLeave={() => setHover(null)} style={{ cursor: "pointer" }}>
                   {on && <circle r="14" fill="none" stroke={T.blueSoft} strokeWidth="1.5" style={{ animation: "ping 1.6s ease-out infinite" }} />}
@@ -891,27 +964,32 @@ function MapView() {
           </g>
         </svg>
 
-        {/* overlays */}
-        <div style={{ position: "absolute", top: 14, left: 14, display: "flex", gap: 8 }}>
-          {chip("requests", "Requests")}
-          {chip("heat", "Risk heat")}
-          {chip("monitoring", "Monitoring")}
-          {chip("labels", "Labels")}
-        </div>
-        <div style={{ position: "absolute", top: 14, right: 14, display: "flex", flexDirection: "column", gap: 6 }}>
-          {zoomBtn("+", () => { const r = svgRef.current.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.35); }, "Zoom in")}
-          {zoomBtn("−", () => { const r = svgRef.current.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.35); }, "Zoom out")}
-          {zoomBtn("⌂", () => { setAnim(true); setCam({ k: 1, tx: 0, ty: 0 }); setTimeout(() => setAnim(false), 620); }, "Reset view")}
-        </div>
-        <div style={{ position: "absolute", bottom: 12, right: 14, fontFamily: T.mono, fontSize: 10.5, color: T.dim, background: "rgba(20,26,34,0.85)", border: `1px solid ${T.line2}`, borderRadius: 5, padding: "4px 9px" }}>
-          {Math.round(cam.k * 100)}% · drag to pan · scroll to zoom
-        </div>
-        <div style={{ position: "absolute", bottom: 12, left: 14, fontFamily: T.mono, fontSize: 9.5, letterSpacing: "0.14em", color: T.faint, background: "rgba(20,26,34,0.85)", borderRadius: 5, padding: "4px 9px" }}>
-          BRANCH 6 (GC6) · REFINERY · AERIAL
-        </div>
-      </Panel>
+      {/* overlays */}
+      <div style={{ position: "absolute", top: 16, left: 16, display: "flex", gap: 8 }}>
+        {chip("requests", "Requests")}
+        {chip("heat", "Risk heat")}
+        {chip("monitoring", "Monitoring")}
+        {chip("labels", "Labels")}
+      </div>
+      <div style={{ position: "absolute", top: 16, right: 372, display: "flex", flexDirection: "column", gap: 6 }}>
+        {zoomBtn("+", () => { const r = svgRef.current.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.35); }, "Zoom in")}
+        {zoomBtn("−", () => { const r = svgRef.current.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.35); }, "Zoom out")}
+        {zoomBtn("⌂", () => { setAnim(true); setCam({ k: 1, tx: 0, ty: 0 }); setTimeout(() => setAnim(false), 620); }, "Reset view")}
+      </div>
+      <div style={{ position: "absolute", bottom: 16, right: 372, fontFamily: T.mono, fontSize: 10.5, color: T.dim, background: "rgba(20,26,34,0.85)", border: `1px solid ${T.line2}`, borderRadius: 5, padding: "4px 9px" }}>
+        {Math.round(cam.k * 100)}% · drag to pan · scroll to zoom
+      </div>
+      <div style={{ position: "absolute", bottom: 16, left: 16, fontFamily: T.mono, fontSize: 9.5, letterSpacing: "0.14em", color: T.faint, background: "rgba(20,26,34,0.85)", borderRadius: 5, padding: "4px 9px" }}>
+        BRANCH 6 (GC6) · REFINERY · AERIAL
+      </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {/* floating sidebar overlay */}
+      <div style={{
+        position: "absolute", top: 16, right: 16, bottom: 16, width: 340, overflowY: "auto",
+        display: "flex", flexDirection: "column", gap: 12, padding: 14,
+        background: "rgba(15,19,25,0.88)", backdropFilter: "blur(6px)",
+        border: `1px solid ${T.line2}`, borderRadius: 10, boxShadow: "0 20px 50px rgba(0,0,0,0.45)",
+      }}>
         <select style={{ ...inputStyle }} defaultValue="gc6"><option value="gc6">Branch 6 (GC6): Refinery</option><option>Branch 5 (GC5): Aromatics 2</option></select>
         <Panel style={{ borderColor: T.blue + "44" }} pad={16}>
           <Eyebrow color={T.blueSoft}>AI risk heatmap</Eyebrow>
@@ -923,7 +1001,7 @@ function MapView() {
         {pins.map((r) => {
           const on = selected === r.no;
           return (
-            <button key={r.no} onClick={() => { setSelected(r.no); flyTo(r.pin.x, r.pin.y); }} style={{ textAlign: "left", background: on ? T.bg2 : T.bg1, border: `1px solid ${on ? T.blue + "77" : T.line}`, borderRadius: 8, padding: 16, cursor: "pointer" }}>
+            <button key={r.no} onClick={() => { setSelected(r.no); flyTo(r.pin.x, r.pin.y); }} onDoubleClick={() => setDetail(r.no)} style={{ textAlign: "left", background: on ? T.bg2 : T.bg1, border: `1px solid ${on ? T.blue + "77" : T.line}`, borderRadius: 8, padding: 16, cursor: "pointer" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontFamily: T.mono, fontSize: 13.5, color: T.text }}>{r.no}</span>
                 <span style={{ fontFamily: T.mono, fontSize: 11, color: T.faint }}>◫ {r.photos}</span>
@@ -937,10 +1015,66 @@ function MapView() {
           );
         })}
         <div style={{ fontFamily: T.sans, fontSize: 11.5, color: T.faint, lineHeight: 1.55, padding: "2px 4px" }}>
-          Click a card or pin to fly to its location. Toggle the monitoring layer to see today's inspection points.
+          Click a card or pin to fly to its location. Double-click for full details. Toggle the monitoring layer to see today's inspection points.
         </div>
       </div>
+
+      {detail && <DetailPanel report={REQUESTS.find((r) => r.no === detail)} onClose={() => setDetail(null)} />}
     </div>
+  );
+}
+
+function DetailPanel({ report, onClose }) {
+  if (!report) return null;
+  const r = report;
+  return (
+    <>
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(6,9,13,0.55)", zIndex: 95, animation: "fadeUp .2s ease" }} />
+      <div style={{
+        position: "fixed", top: 0, right: 0, bottom: 0, width: 420, zIndex: 96,
+        background: T.bg1, borderLeft: `1px solid ${T.line2}`, boxShadow: "-24px 0 60px rgba(0,0,0,0.5)",
+        display: "flex", flexDirection: "column", animation: "toastIn .25s ease",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 22px", borderBottom: `1px solid ${T.line}` }}>
+          <div>
+            <div style={{ fontFamily: T.mono, fontSize: 15, color: T.text, fontWeight: 600 }}>{r.no}</div>
+            <div style={{ fontFamily: T.sans, fontSize: 12, color: T.faint, marginTop: 3 }}>{r.tag}</div>
+          </div>
+          <button onClick={onClose} aria-label="Close" style={{ background: T.bg3, border: `1px solid ${T.line2}`, borderRadius: 6, color: T.dim, width: 30, height: 30, cursor: "pointer", flexShrink: 0 }}>✕</button>
+        </div>
+        <div style={{ padding: 22, display: "flex", flexDirection: "column", gap: 18, overflowY: "auto" }}>
+          <Chip c={STATUS[r.status].c} bg={STATUS[r.status].bg}>{r.status.toUpperCase()}</Chip>
+
+          <div>
+            <Eyebrow>Plant information</Eyebrow>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 10 }}>
+              <div><div style={{ fontFamily: T.mono, fontSize: 10, color: T.faint, letterSpacing: "0.06em" }}>PLANT</div><div style={{ fontFamily: T.sans, fontSize: 13.5, color: T.text, marginTop: 3 }}>{r.plant}</div></div>
+              <div><div style={{ fontFamily: T.mono, fontSize: 10, color: T.faint, letterSpacing: "0.06em" }}>UNIT</div><div style={{ fontFamily: T.sans, fontSize: 13.5, color: T.text, marginTop: 3 }}>{r.unit}</div></div>
+            </div>
+          </div>
+
+          <div>
+            <Eyebrow>Leak details</Eyebrow>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
+              <div><div style={{ fontFamily: T.mono, fontSize: 10, color: T.faint, letterSpacing: "0.06em" }}>FLUID TYPE</div><div style={{ fontFamily: T.sans, fontSize: 13.5, color: T.text, marginTop: 3 }}>{r.fluid}</div></div>
+              <div><div style={{ fontFamily: T.mono, fontSize: 10, color: T.faint, letterSpacing: "0.06em" }}>EQUIPMENT / TAG</div><div style={{ fontFamily: T.sans, fontSize: 13.5, color: T.text, marginTop: 3 }}>{r.tag}</div></div>
+              <div><div style={{ fontFamily: T.mono, fontSize: 10, color: T.faint, letterSpacing: "0.06em" }}>PHOTOS</div><div style={{ fontFamily: T.sans, fontSize: 13.5, color: T.text, marginTop: 3 }}>◫ {r.photos}</div></div>
+            </div>
+          </div>
+
+          <div>
+            <Eyebrow color={r.ai >= 70 ? T.red : T.blueSoft}>AI risk assessment</Eyebrow>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+              <div style={{ flex: 1, height: 6, background: T.bg3, borderRadius: 3 }}>
+                <div style={{ width: `${r.ai}%`, height: "100%", background: r.ai >= 70 ? T.red : r.ai >= 40 ? T.orange : T.teal, borderRadius: 3 }} />
+              </div>
+              <span style={{ fontFamily: T.mono, fontSize: 13, color: r.ai >= 70 ? T.red : T.text, fontWeight: 600 }}>{r.ai}</span>
+            </div>
+            <div style={{ fontFamily: T.sans, fontSize: 12.5, color: T.dim, marginTop: 8 }}>Risk level: <span style={{ color: RISK[r.risk], fontWeight: 600 }}>{r.risk}</span></div>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -1031,20 +1165,20 @@ function Repairs({ toast }) {
   const rc = { "Scheduled": T.green, "Pending slot": T.orange, "Deferred": T.dim };
   return (
     <div style={{ padding: 28, display: "flex", flexDirection: "column", gap: 16, animation: "fadeUp .3s ease" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>
-        <Panel>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "stretch" }}>
+        <Panel style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ fontFamily: T.sans, fontSize: 15, fontWeight: 600, color: T.text, marginBottom: 12 }}>Permanent repair schedule</div>
           <Field label="Date">
             <input style={{ ...inputStyle, fontFamily: T.mono }} defaultValue="21/02/2027" />
           </Field>
           <div style={{ fontFamily: T.sans, fontSize: 12, color: T.faint, marginTop: 10, lineHeight: 1.55 }}>Every temporary clamp carries a committed permanent-repair date. AI flags any clamp whose predicted life ends before its scheduled slot.</div>
         </Panel>
-        <Panel style={{ borderColor: T.red + "55" }}>
+        <Panel style={{ borderColor: T.red + "55", display: "flex", flexDirection: "column" }}>
           <Eyebrow color={T.red}>AI predicted-life risk</Eyebrow>
           <div style={{ fontFamily: T.sans, fontSize: 12.5, color: T.text, lineHeight: 1.6, marginTop: 8 }}>
             <span style={{ fontFamily: T.mono, fontSize: 12, color: T.blueSoft }}>A-P1-2026/143</span> is still awaiting a shutdown slot, but the clamp's predicted-life model puts failure risk before the next turnaround window — Extreme risk, Chemical service at GC7. Recommend requesting an earlier slot.
           </div>
-          <button onClick={() => toast("Earlier repair slot requested for A-P1-2026/143 — planning notified.")} style={{ marginTop: 12, fontFamily: T.sans, fontSize: 12, fontWeight: 600, color: "#0B1220", background: T.blue, border: "none", borderRadius: 6, padding: "8px 14px", cursor: "pointer" }}>Request earlier slot</button>
+          <button onClick={() => toast("Earlier repair slot requested for A-P1-2026/143 — planning notified.")} style={{ marginTop: "auto", alignSelf: "flex-start", fontFamily: T.sans, fontSize: 12, fontWeight: 600, color: "#0B1220", background: T.blue, border: "none", borderRadius: 6, padding: "8px 14px", cursor: "pointer" }}>Request earlier slot</button>
         </Panel>
       </div>
       <Panel pad={0}>
