@@ -1,8 +1,10 @@
 # TCM Clamp Management
 
-AI-driven temporary clamp management system — portfolio project by Bo.
+![TCM Clamp Management cover](docs/cover.png)
 
-Built with React + Vite. Live demo auto-deploys to GitHub Pages on every push to `main`.
+An AI-assisted operations dashboard for tracking temporary pipe clamps across a refinery complex — from leak report to permanent repair, with predictive risk scoring, demand forecasting, and schedule optimization built into every screen.
+
+Portfolio project by Bo. Built with React + Vite. Live demo auto-deploys to GitHub Pages on every push to `main`.
 
 ## Features
 - Dashboard with predictive charts
