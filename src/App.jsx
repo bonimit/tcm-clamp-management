@@ -21,9 +21,9 @@ const T = {
   text: "#E7EDF4",
   dim: "#93A1B3",
   faint: "#5D6B7E",
-  blue: "#4C8DFF",      // corporate primary
-  blueSoft: "#78A9FF",
-  blueDim: "rgba(76,141,255,0.14)",
+  blue: "#F2F4F8",      // corporate primary — monochrome ink (was blue), bright on this dark canvas
+  blueSoft: "#C7CFDA",
+  blueDim: "rgba(255,255,255,0.07)",
   yellow: "#F1C21B",    // draft / on-plan
   orange: "#FF832B",    // approvals
   red: "#FA4D56",       // overdue / extreme
@@ -406,7 +406,7 @@ function Dashboard({ setView }) {
 
 /* ---------------- ONLINE LEAK SEALING REQUEST ---------------- */
 
-function Requests({ openCreate }) {
+function Requests({ openCreate, toast }) {
   const [tab, setTab] = useState("All reports");
   const [q, setQ] = useState("");
   const tabs = ["All reports", "Draft", "Design approval", "VP approval", "Waiting installation"];
@@ -432,6 +432,14 @@ function Requests({ openCreate }) {
           </Panel>
         ))}
       </div>
+
+      <Panel style={{ borderColor: T.blue + "44" }}>
+        <Eyebrow color={T.blueSoft}>AI prioritization</Eyebrow>
+        <div style={{ fontFamily: T.sans, fontSize: 12.5, color: T.text, lineHeight: 1.6, marginTop: 8 }}>
+          <span style={{ fontFamily: T.mono, fontSize: 12, color: T.blueSoft }}>A-P1-2026/143</span> ranks highest across the pipeline — AI leak score 88, Extreme risk, Chemical service at GC7. Model recommends fast-tracking design approval ahead of the two High-risk items below it.
+        </div>
+        <button onClick={() => { setTab("Design approval"); setQ("A-P1-2026/143"); toast?.("Pipeline sorted to surface A-P1-2026/143 for review."); }} style={{ marginTop: 12, fontFamily: T.sans, fontSize: 12, fontWeight: 600, color: "#0B1220", background: T.blue, border: "none", borderRadius: 6, padding: "8px 14px", cursor: "pointer" }}>Review flagged report</button>
+      </Panel>
 
       <Panel pad={0}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", borderBottom: `1px solid ${T.line}` }}>
@@ -863,7 +871,7 @@ function MapView() {
                   onMouseEnter={() => setHover({ x: r.pin.x, y: r.pin.y, title: r.no, sub: r.tag, kind: r.status.toUpperCase(), ai: r.ai })}
                   onMouseLeave={() => setHover(null)} style={{ cursor: "pointer" }}>
                   {on && <circle r="14" fill="none" stroke={T.blueSoft} strokeWidth="1.5" style={{ animation: "ping 1.6s ease-out infinite" }} />}
-                  <path d="M0 10 C -9 0 -11 -5 -11 -10 A 11 11 0 1 1 11 -10 C 11 -5 9 0 0 10 Z" fill={on ? T.blue : "#1E4C8F"} stroke={on ? "#CFE0FF" : T.blueSoft} strokeWidth="1.4" transform="translate(0 -4)" />
+                  <path d="M0 10 C -9 0 -11 -5 -11 -10 A 11 11 0 1 1 11 -10 C 11 -5 9 0 0 10 Z" fill={on ? T.blue : T.line2} stroke={on ? "#FFFFFF" : T.blueSoft} strokeWidth="1.4" transform="translate(0 -4)" />
                   <text y="-9" fill="#fff" fontSize="11" fontWeight="600" fontFamily={T.sans} textAnchor="middle">{r.pin.n}</text>
                 </g>
               );
@@ -905,6 +913,13 @@ function MapView() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <select style={{ ...inputStyle }} defaultValue="gc6"><option value="gc6">Branch 6 (GC6): Refinery</option><option>Branch 5 (GC5): Aromatics 2</option></select>
+        <Panel style={{ borderColor: T.blue + "44" }} pad={16}>
+          <Eyebrow color={T.blueSoft}>AI risk heatmap</Eyebrow>
+          <div style={{ fontFamily: T.sans, fontSize: 12, color: T.text, lineHeight: 1.55, marginTop: 7 }}>
+            Highest concentration of AI-flagged leak risk sits around unit 910 — pin 3 scores 46 and is trending up week over week.
+          </div>
+          <button onClick={() => { const p = pins.find((r) => r.no === "A-P2-2026/145"); if (p) { setSelected(p.no); flyTo(p.pin.x, p.pin.y); } }} style={{ marginTop: 10, fontFamily: T.sans, fontSize: 11.5, fontWeight: 600, color: "#0B1220", background: T.blue, border: "none", borderRadius: 6, padding: "6px 12px", cursor: "pointer" }}>Fly to hotspot</button>
+        </Panel>
         {pins.map((r) => {
           const on = selected === r.no;
           return (
@@ -988,7 +1003,7 @@ function Monitoring({ toast }) {
             <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
               <select style={{ ...inputStyle, flex: 1, padding: "8px 10px" }}><option>Condition</option><option>Good</option><option>Leak</option></select>
               <input placeholder="DD/MM/YYYY" style={{ ...inputStyle, width: 118, padding: "8px 10px" }} />
-              <button onClick={() => toast("Monitoring record added and synced to QSHE dashboard.")} style={{ fontFamily: T.sans, fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#2B3FA8", border: "none", borderRadius: 6, padding: "0 18px", cursor: "pointer" }}>ADD</button>
+              <button onClick={() => toast("Monitoring record added and synced to QSHE dashboard.")} style={{ fontFamily: T.sans, fontSize: 12.5, fontWeight: 600, color: "#0B1220", background: T.blue, border: "none", borderRadius: 6, padding: "0 18px", cursor: "pointer" }}>ADD</button>
             </div>
           </Panel>
           <Panel style={{ borderColor: T.blue + "44" }}>
@@ -1016,13 +1031,22 @@ function Repairs({ toast }) {
   const rc = { "Scheduled": T.green, "Pending slot": T.orange, "Deferred": T.dim };
   return (
     <div style={{ padding: 28, display: "flex", flexDirection: "column", gap: 16, animation: "fadeUp .3s ease" }}>
-      <Panel style={{ maxWidth: 420 }}>
-        <div style={{ fontFamily: T.sans, fontSize: 15, fontWeight: 600, color: T.text, marginBottom: 12 }}>Permanent repair schedule</div>
-        <Field label="Date">
-          <input style={{ ...inputStyle, fontFamily: T.mono }} defaultValue="21/02/2027" />
-        </Field>
-        <div style={{ fontFamily: T.sans, fontSize: 12, color: T.faint, marginTop: 10, lineHeight: 1.55 }}>Every temporary clamp carries a committed permanent-repair date. AI flags any clamp whose predicted life ends before its scheduled slot.</div>
-      </Panel>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>
+        <Panel>
+          <div style={{ fontFamily: T.sans, fontSize: 15, fontWeight: 600, color: T.text, marginBottom: 12 }}>Permanent repair schedule</div>
+          <Field label="Date">
+            <input style={{ ...inputStyle, fontFamily: T.mono }} defaultValue="21/02/2027" />
+          </Field>
+          <div style={{ fontFamily: T.sans, fontSize: 12, color: T.faint, marginTop: 10, lineHeight: 1.55 }}>Every temporary clamp carries a committed permanent-repair date. AI flags any clamp whose predicted life ends before its scheduled slot.</div>
+        </Panel>
+        <Panel style={{ borderColor: T.red + "55" }}>
+          <Eyebrow color={T.red}>AI predicted-life risk</Eyebrow>
+          <div style={{ fontFamily: T.sans, fontSize: 12.5, color: T.text, lineHeight: 1.6, marginTop: 8 }}>
+            <span style={{ fontFamily: T.mono, fontSize: 12, color: T.blueSoft }}>A-P1-2026/143</span> is still awaiting a shutdown slot, but the clamp's predicted-life model puts failure risk before the next turnaround window — Extreme risk, Chemical service at GC7. Recommend requesting an earlier slot.
+          </div>
+          <button onClick={() => toast("Earlier repair slot requested for A-P1-2026/143 — planning notified.")} style={{ marginTop: 12, fontFamily: T.sans, fontSize: 12, fontWeight: 600, color: "#0B1220", background: T.blue, border: "none", borderRadius: 6, padding: "8px 14px", cursor: "pointer" }}>Request earlier slot</button>
+        </Panel>
+      </div>
       <Panel pad={0}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead><tr><Th>Report No.</Th><Th>Repair scope</Th><Th>Window</Th><Th>Crew</Th><Th>Status</Th><Th /></tr></thead>
@@ -1031,7 +1055,12 @@ function Repairs({ toast }) {
               <tr key={r.no}
                 onMouseEnter={(e) => (e.currentTarget.style.background = T.bg2)}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                <Td style={{ fontFamily: T.mono, fontSize: 12.5, color: T.text }}>{r.no}</Td>
+                <Td style={{ fontFamily: T.mono, fontSize: 12.5, color: T.text }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                    {r.no}
+                    {r.no === "A-P1-2026/143" && <span style={{ fontFamily: T.mono, fontSize: 9, color: T.red, border: `1px solid ${T.red}55`, borderRadius: 4, padding: "1px 5px", letterSpacing: "0.06em" }}>AI</span>}
+                  </div>
+                </Td>
                 <Td style={{ color: T.text }}>{r.scope}</Td>
                 <Td style={{ fontFamily: T.mono, fontSize: 12 }}>{r.window}</Td>
                 <Td>{r.crew}</Td>
@@ -1068,7 +1097,12 @@ function Inventory() {
                   <Td style={{ fontFamily: T.mono, fontSize: 12 }}>{r.store}</Td>
                   <Td style={{ fontFamily: T.mono, fontSize: 12.5 }}>{r.total}</Td>
                   <Td style={{ fontFamily: T.mono, fontSize: 12.5 }}>{r.reserved}</Td>
-                  <Td style={{ fontFamily: T.mono, fontSize: 12.5, color: c }}>{r.avail}</Td>
+                  <Td style={{ fontFamily: T.mono, fontSize: 12.5, color: c }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                      {r.avail}
+                      {r.level < 0.25 && <span style={{ fontFamily: T.mono, fontSize: 9, color: T.red, border: `1px solid ${T.red}55`, borderRadius: 4, padding: "1px 5px", letterSpacing: "0.06em" }}>AI: REORDER</span>}
+                    </div>
+                  </Td>
                   <Td>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <div style={{ flex: 1, height: 5, background: T.bg3, borderRadius: 3 }}>
@@ -1261,7 +1295,7 @@ export default function App() {
         <div style={{ flex: 1, overflowY: "auto" }}>
           {view === "dashboard" && <Dashboard setView={setView} />}
           {view === "map" && <MapView />}
-          {view === "requests" && <Requests openCreate={() => setCreateOpen(true)} />}
+          {view === "requests" && <Requests openCreate={() => setCreateOpen(true)} toast={setToastMsg} />}
           {view === "monitoring" && <Monitoring toast={setToastMsg} />}
           {view === "repairs" && <Repairs toast={setToastMsg} />}
           {view === "inventory" && <Inventory />}
