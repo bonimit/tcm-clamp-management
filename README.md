@@ -1,6 +1,6 @@
 # TCM Clamp Management
 
-![TCM Clamp Management cover](docs/cover.png)
+![TCM Clamp Management cover](docs/cover.gif)
 
 An AI-assisted operations dashboard for tracking temporary pipe clamps across a refinery complex — from leak report to permanent repair, with predictive risk scoring, demand forecasting, and schedule optimization built into every screen.
 
